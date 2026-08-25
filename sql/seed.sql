@@ -73,3 +73,22 @@ INSERT INTO choices (id, question_id, label, is_correct) VALUES
   (15, 5, 'Sa trace est non nulle',      FALSE),
   (16, 5, 'Elle est symetrique',         FALSE)
 ON CONFLICT (id) DO NOTHING;
+
+-- ---------------------------------------------------------------------
+--  Resynchronisation des sequences
+--
+--  Indispensable : les insertions ci-dessus fixent les identifiants a la
+--  main, les sequences SERIAL sont donc restees a 1. Sans ce bloc, la
+--  premiere creation de cours par l'API tenterait de reutiliser l'id 1
+--  et echouerait sur une violation de cle primaire.
+--
+--  is_called = false fait que le prochain nextval() renvoie exactement
+--  la valeur passee, sans l'incrementer une fois de plus.
+-- ---------------------------------------------------------------------
+SELECT setval(pg_get_serial_sequence('users',     'id'), COALESCE((SELECT MAX(id) FROM users),     0) + 1, false);
+SELECT setval(pg_get_serial_sequence('courses',   'id'), COALESCE((SELECT MAX(id) FROM courses),   0) + 1, false);
+SELECT setval(pg_get_serial_sequence('exams',     'id'), COALESCE((SELECT MAX(id) FROM exams),     0) + 1, false);
+SELECT setval(pg_get_serial_sequence('questions', 'id'), COALESCE((SELECT MAX(id) FROM questions), 0) + 1, false);
+SELECT setval(pg_get_serial_sequence('choices',   'id'), COALESCE((SELECT MAX(id) FROM choices),   0) + 1, false);
+SELECT setval(pg_get_serial_sequence('attempts',  'id'), COALESCE((SELECT MAX(id) FROM attempts),  0) + 1, false);
+SELECT setval(pg_get_serial_sequence('answers',   'id'), COALESCE((SELECT MAX(id) FROM answers),   0) + 1, false);

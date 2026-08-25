@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import bcrypt from 'bcrypt';
 import { env } from '../config/env';
 import { pool, closePool } from './pool';
@@ -67,9 +69,30 @@ async function seedEtudiants(): Promise<void> {
   );
 }
 
+/**
+ * Cours, examens, questions et choix.
+ * Ces donnees ne contiennent aucun secret : elles vivent dans
+ * sql/seed.sql, qui reste lisible et modifiable sans toucher au code.
+ */
+async function seedDonneesDemo(): Promise<void> {
+  const seedPath = resolve(__dirname, '../../sql/seed.sql');
+  await pool.query(readFileSync(seedPath, 'utf8'));
+
+  const { rows } = await pool.query<{ cours: string; examens: string; questions: string }>(
+    `SELECT (SELECT count(*) FROM courses)   AS cours,
+            (SELECT count(*) FROM exams)     AS examens,
+            (SELECT count(*) FROM questions) AS questions`
+  );
+  const total = rows[0];
+  console.log(
+    `[seed] ${total.cours} cours, ${total.examens} examens, ${total.questions} questions`
+  );
+}
+
 async function seed(): Promise<void> {
   await seedAdmin();
   await seedEtudiants();
+  await seedDonneesDemo();
 }
 
 seed()
