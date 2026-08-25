@@ -4,6 +4,13 @@ import { env } from './config/env';
 import { asyncHandler } from './middlewares/asyncHandler';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { pool } from './db/pool';
+import { authRouter } from './routes/auth';
+import { studentsRouter } from './routes/students';
+import { coursesRouter } from './routes/courses';
+import { examsRouter } from './routes/exams';
+import { examQuestionsRouter } from './routes/examQuestions';
+import { questionsRouter } from './routes/questions';
+import { myRouter } from './routes/my';
 
 /**
  * Assemblage de l'application Express.
@@ -30,7 +37,23 @@ export function createApp(): Express {
     })
   );
 
-  // --- Routes des verticales : montees ci-dessous ---
+  // --- Routes des verticales ---
+  //
+  // Les sept routers sont montes ici une fois pour toutes, des le socle.
+  // Chaque membre remplit uniquement son fichier dans src/routes/ : plus
+  // personne n'a de raison de modifier app.ts, donc plus de conflit Git
+  // sur ce fichier partage.
+  //
+  // examQuestionsRouter (P4) est monte AVANT examsRouter (P3) sur le meme
+  // prefixe : les chemins /:id/questions et /:id/results doivent etre
+  // examines avant le /:id generique des examens.
+  app.use('/api/auth', authRouter);
+  app.use('/api/students', studentsRouter);
+  app.use('/api/courses', coursesRouter);
+  app.use('/api/exams', examQuestionsRouter);
+  app.use('/api/exams', examsRouter);
+  app.use('/api/questions', questionsRouter);
+  app.use('/api/my', myRouter);
 
   // Toute route inconnue repond au format RG-13.
   app.use(notFoundHandler);
