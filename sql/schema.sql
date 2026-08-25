@@ -66,3 +66,54 @@ CREATE TABLE courses (
   CONSTRAINT courses_code_non_vide CHECK (length(btrim(code)) > 0),
   CONSTRAINT courses_nom_non_vide  CHECK (length(btrim(name)) > 0)
 );
+
+-- ---------------------------------------------------------------------
+--  exams : un examen appartient a un cours et possede une fenetre
+-- ---------------------------------------------------------------------
+CREATE TABLE exams (
+  id          SERIAL PRIMARY KEY,
+  course_id   INTEGER     NOT NULL,
+  title       TEXT        NOT NULL,
+  description TEXT,
+  starts_at   TIMESTAMPTZ NOT NULL,
+  ends_at     TIMESTAMPTZ NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  -- RG-09 : un cours qui porte des examens ne peut pas etre supprime.
+  -- RESTRICT est le filet de securite ; le message lisible ("Ce cours
+  -- contient 3 examens") reste produit par la couche Service/.
+  CONSTRAINT exams_course_fk FOREIGN KEY (course_id)
+    REFERENCES courses (id) ON DELETE RESTRICT,
+
+  -- RG-03 : une fenetre inversee rendrait l'examen a jamais invisible.
+  CONSTRAINT exams_fenetre_valide CHECK (ends_at > starts_at),
+
+  CONSTRAINT exams_titre_non_vide CHECK (length(btrim(title)) > 0)
+);
+
+-- Rappel fuseau horaire : starts_at et ends_at sont des TIMESTAMPTZ,
+-- donc stockes en UTC. Le front envoie et recoit de l'ISO 8601 en UTC ;
+-- la conversion vers l'heure locale se fait uniquement a l'affichage.
+
+-- ---------------------------------------------------------------------
+--  questions : enonces d'un examen
+-- ---------------------------------------------------------------------
+CREATE TABLE questions (
+  id        SERIAL PRIMARY KEY,
+  exam_id   INTEGER NOT NULL,
+  statement TEXT    NOT NULL,
+  points    INTEGER NOT NULL,
+  position  INTEGER NOT NULL DEFAULT 1,
+
+  -- Supprimer un examen supprime ses questions. Ce CASCADE n'est jamais
+  -- atteint quand des tentatives existent : RG-09 bloque en amont via
+  -- attempts.exam_id ON DELETE RESTRICT.
+  CONSTRAINT questions_exam_fk FOREIGN KEY (exam_id)
+    REFERENCES exams (id) ON DELETE CASCADE,
+
+  -- RG-04 : points strictement positifs, un bareme a 0 ou negatif est refuse.
+  CONSTRAINT questions_points_positifs CHECK (points > 0),
+
+  CONSTRAINT questions_enonce_non_vide CHECK (length(btrim(statement)) > 0),
+  CONSTRAINT questions_position_positive CHECK (position > 0)
+);
