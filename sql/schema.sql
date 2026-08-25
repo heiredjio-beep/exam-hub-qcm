@@ -202,3 +202,20 @@ CREATE TABLE answers (
   CONSTRAINT answers_choice_fk FOREIGN KEY (choice_id)
     REFERENCES choices (id) ON DELETE RESTRICT
 );
+
+-- ---------------------------------------------------------------------
+--  Index de parcours
+--  Les jointures du projet sont toutes descendantes (cours -> examens ->
+--  questions -> choix) : sans ces index, chaque page d'administration
+--  declenche un scan sequentiel complet.
+-- ---------------------------------------------------------------------
+CREATE INDEX idx_exams_course_id      ON exams (course_id);
+CREATE INDEX idx_questions_exam_id    ON questions (exam_id, position);
+CREATE INDEX idx_choices_question_id  ON choices (question_id);
+CREATE INDEX idx_attempts_student_id  ON attempts (student_id);
+CREATE INDEX idx_attempts_exam_id     ON attempts (exam_id);
+CREATE INDEX idx_answers_attempt_id   ON answers (attempt_id);
+
+-- RG-03 : la liste des examens ouverts filtre sur la fenetre courante
+-- (NOW() BETWEEN starts_at AND ends_at), comparaison faite en SQL.
+CREATE INDEX idx_exams_fenetre ON exams (starts_at, ends_at);
