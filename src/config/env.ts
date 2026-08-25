@@ -1,6 +1,10 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+// override: true est indispensable. Une installation PostgreSQL locale pose
+// souvent PGPORT/PGUSER comme variables systeme ; sans cette option elles
+// primeraient sur le .env du projet et le backend se connecterait a la
+// mauvaise base sans le moindre message d'erreur explicite.
+dotenv.config({ override: true });
 
 /**
  * Point d'entree unique de la configuration.
