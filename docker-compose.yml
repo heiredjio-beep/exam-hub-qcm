@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: exam_hub_postgres
+    restart: unless-stopped
+    # 5433 cote hote pour ne pas entrer en conflit avec une installation
+    # PostgreSQL locale deja presente sur le poste d'un membre de l'equipe.
+    #
+    # Variable dediee et non PGPORT : PGPORT est un nom reserve par libpq et
+    # se retrouve souvent deja pose comme variable systeme par un installeur
+    # PostgreSQL. Docker Compose lit l'environnement du shell en priorite sur
+    # le .env, le port publie serait alors impossible a redefinir.
+    # Les deux valeurs doivent rester identiques dans le .env.
+    ports:
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
+    environment:
+      POSTGRES_USER: ${PGUSER:-examhub}
+      POSTGRES_PASSWORD: ${PGPASSWORD:-changeme}
+      POSTGRES_DB: ${PGDATABASE:-examhub}
+      # Base creee en UTC : toute la comparaison de fenetre d'examen (RG-03)
+      # se fait cote serveur, il ne doit rester aucune ambiguite de fuseau.
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - exam_hub_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-examhub} -d ${PGDATABASE:-examhub}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  exam_hub_pgdata:
+    name: exam_hub_pgdata
