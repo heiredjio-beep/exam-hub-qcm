@@ -117,3 +117,30 @@ CREATE TABLE questions (
   CONSTRAINT questions_enonce_non_vide CHECK (length(btrim(statement)) > 0),
   CONSTRAINT questions_position_positive CHECK (position > 0)
 );
+
+-- ---------------------------------------------------------------------
+--  choices : propositions de reponse d'une question
+-- ---------------------------------------------------------------------
+CREATE TABLE choices (
+  id          SERIAL PRIMARY KEY,
+  question_id INTEGER NOT NULL,
+  label       TEXT    NOT NULL,
+  is_correct  BOOLEAN NOT NULL DEFAULT FALSE,
+
+  CONSTRAINT choices_question_fk FOREIGN KEY (question_id)
+    REFERENCES questions (id) ON DELETE CASCADE,
+
+  CONSTRAINT choices_libelle_non_vide CHECK (length(btrim(label)) > 0)
+);
+
+-- RG-04, premiere moitie : au plus une bonne reponse par question.
+-- Un index unique partiel ne compte que les lignes is_correct = TRUE,
+-- donc plusieurs mauvaises reponses restent autorisees.
+CREATE UNIQUE INDEX one_correct_choice_per_question
+  ON choices (question_id)
+  WHERE is_correct = TRUE;
+
+-- RG-04, seconde moitie : "au moins une bonne reponse" et "entre 2 et 6
+-- choix" ne sont pas exprimables proprement par une contrainte SQL.
+-- Elles sont validees dans Service/ a la creation ET a la modification
+-- (perimetre P4, branche feat/questions-validation-rg04).
