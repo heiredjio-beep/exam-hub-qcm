@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # Dependances
+=======
+# Dépendances
+>>>>>>> 465a69a (chore(back): ajouter le gitignore avant le premier commit de code)
 node_modules/
 
 # Build
@@ -14,11 +18,20 @@ build/
 *.log
 npm-debug.log*
 
+<<<<<<< HEAD
 # Editeurs et systeme
+=======
+# Éditeurs et système
+>>>>>>> 465a69a (chore(back): ajouter le gitignore avant le premier commit de code)
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
 
+<<<<<<< HEAD
 # Donnees Docker locales
 pgdata/
+=======
+# Données Docker locales
+pgdata/
+>>>>>>> 465a69a (chore(back): ajouter le gitignore avant le premier commit de code)
