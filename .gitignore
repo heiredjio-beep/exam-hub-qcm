@@ -1,0 +1,24 @@
+# Dependances
+node_modules/
+
+# Build
+dist/
+build/
+
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editeurs et systeme
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Donnees Docker locales
+pgdata/
