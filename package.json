@@ -4,7 +4,12 @@
   "description": "Application web de gestion d’examens QCM permettant aux administrateurs de gérer les cours, examens et étudiants, et aux étudiants de passer des examens en ligne avec correction instantanée.",
   "main": "dist/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "db:migrate": "ts-node-dev --transpile-only --no-notify src/db/migrate.ts",
+    "db:seed": "ts-node-dev --transpile-only --no-notify src/db/seed.ts",
+    "db:reset": "npm run db:migrate && npm run db:seed"
   },
   "repository": {
     "type": "git",
@@ -34,6 +39,6 @@
     "@types/node": "^26.3.0",
     "@types/pg": "^8.23.1",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^7.0.2"
+    "typescript": "^5.9.3"
   }
 }
