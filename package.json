@@ -1,0 +1,39 @@
+{
+  "name": "exam-hub-backend",
+  "version": "1.0.0",
+  "description": "Application web de gestion d’examens QCM permettant aux administrateurs de gérer les cours, examens et étudiants, et aux étudiants de passer des examens en ligne avec correction instantanée.",
+  "main": "dist/server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/heiredjio-beep/exam-hub-qcm.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/heiredjio-beep/exam-hub-qcm/issues"
+  },
+  "homepage": "https://github.com/heiredjio-beep/exam-hub-qcm#readme",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.3.0",
+    "@types/pg": "^8.23.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^7.0.2"
+  }
+}
