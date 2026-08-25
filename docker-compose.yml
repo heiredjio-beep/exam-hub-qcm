@@ -5,8 +5,14 @@ services:
     restart: unless-stopped
     # 5433 cote hote pour ne pas entrer en conflit avec une installation
     # PostgreSQL locale deja presente sur le poste d'un membre de l'equipe.
+    #
+    # Variable dediee et non PGPORT : PGPORT est un nom reserve par libpq et
+    # se retrouve souvent deja pose comme variable systeme par un installeur
+    # PostgreSQL. Docker Compose lit l'environnement du shell en priorite sur
+    # le .env, le port publie serait alors impossible a redefinir.
+    # Les deux valeurs doivent rester identiques dans le .env.
     ports:
-      - "${PGPORT:-5433}:5432"
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
     environment:
       POSTGRES_USER: ${PGUSER:-examhub}
       POSTGRES_PASSWORD: ${PGPASSWORD:-changeme}
