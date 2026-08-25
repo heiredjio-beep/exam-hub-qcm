@@ -144,3 +144,61 @@ CREATE UNIQUE INDEX one_correct_choice_per_question
 -- choix" ne sont pas exprimables proprement par une contrainte SQL.
 -- Elles sont validees dans Service/ a la creation ET a la modification
 -- (perimetre P4, branche feat/questions-validation-rg04).
+
+-- ---------------------------------------------------------------------
+--  attempts : une tentative d'un etudiant sur un examen
+-- ---------------------------------------------------------------------
+CREATE TABLE attempts (
+  id           SERIAL PRIMARY KEY,
+  exam_id      INTEGER     NOT NULL,
+  student_id   INTEGER     NOT NULL,
+  score        INTEGER     NOT NULL DEFAULT 0,
+  max_score    INTEGER     NOT NULL DEFAULT 0,
+  submitted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  -- RG-02 : une seule tentative par etudiant et par examen. C'est la
+  -- garantie en base ; la verification serveur en transaction (P5) la
+  -- double, et la violation 23505 doit etre traduite en 409 lisible.
+  CONSTRAINT attempts_une_par_etudiant UNIQUE (exam_id, student_id),
+
+  -- RG-09 : un examen qui a des tentatives n'est plus supprimable.
+  CONSTRAINT attempts_exam_fk FOREIGN KEY (exam_id)
+    REFERENCES exams (id) ON DELETE RESTRICT,
+
+  -- RG-10 : un etudiant n'est jamais supprime, ses resultats restent
+  -- consultables. RESTRICT interdit toute suppression physique.
+  CONSTRAINT attempts_student_fk FOREIGN KEY (student_id)
+    REFERENCES users (id) ON DELETE RESTRICT,
+
+  -- RG-06 : la note est calculee cote serveur, elle ne peut pas depasser
+  -- le bareme ni etre negative.
+  CONSTRAINT attempts_score_borne CHECK (score >= 0 AND score <= max_score),
+  CONSTRAINT attempts_bareme_positif CHECK (max_score >= 0)
+);
+
+-- ---------------------------------------------------------------------
+--  answers : reponse donnee a une question dans une tentative
+-- ---------------------------------------------------------------------
+CREATE TABLE answers (
+  id          SERIAL PRIMARY KEY,
+  attempt_id  INTEGER NOT NULL,
+  question_id INTEGER NOT NULL,
+
+  -- RG-05 : choice_id nullable. NULL = question laissee sans reponse,
+  -- elle vaut 0 point et la soumission partielle reste acceptee.
+  choice_id   INTEGER,
+
+  -- Une seule reponse enregistree par question dans une tentative.
+  CONSTRAINT answers_une_par_question UNIQUE (attempt_id, question_id),
+
+  CONSTRAINT answers_attempt_fk FOREIGN KEY (attempt_id)
+    REFERENCES attempts (id) ON DELETE CASCADE,
+
+  -- RESTRICT et non CASCADE : tant qu'une reponse pointe une question ou
+  -- un choix, la suppression est refusee. RG-08 bloque deja ce cas en
+  -- amont cote service, ceci est le filet de securite en base.
+  CONSTRAINT answers_question_fk FOREIGN KEY (question_id)
+    REFERENCES questions (id) ON DELETE RESTRICT,
+  CONSTRAINT answers_choice_fk FOREIGN KEY (choice_id)
+    REFERENCES choices (id) ON DELETE RESTRICT
+);
