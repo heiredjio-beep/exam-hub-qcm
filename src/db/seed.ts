@@ -2,6 +2,9 @@ import bcrypt from 'bcrypt';
 import { env } from '../config/env';
 import { pool, closePool } from './pool';
 
+/** Mot de passe commun aux comptes de demonstration, documente dans le README. */
+const MOT_DE_PASSE_ETUDIANT = 'Etudiant123!';
+
 /**
  * Jeu de donnees initial.
  *
@@ -30,8 +33,43 @@ async function seedAdmin(): Promise<void> {
   );
 }
 
+/**
+ * Trois etudiants de demonstration, dont un desactive.
+ *
+ * RG-11 : le compte desactive sert a prouver que la connexion renvoie un
+ * refus explicite ("Ce compte a ete desactive"), distinct du message
+ * generique d'un mauvais mot de passe.
+ * RG-10 : ce meme compte n'est jamais supprime, ses resultats restent
+ * consultables par l'administrateur.
+ */
+const ETUDIANTS: ReadonlyArray<{ fullName: string; email: string; isActive: boolean }> = [
+  { fullName: 'Rakoto Andry', email: 'andry@examhub.local', isActive: true },
+  { fullName: 'Rasoa Miora', email: 'miora@examhub.local', isActive: true },
+  { fullName: 'Randria Tiana', email: 'tiana@examhub.local', isActive: false },
+];
+
+async function seedEtudiants(): Promise<void> {
+  const passwordHash = await bcrypt.hash(MOT_DE_PASSE_ETUDIANT, env.bcryptRounds);
+
+  for (const etudiant of ETUDIANTS) {
+    await pool.query(
+      `INSERT INTO users (full_name, email, password_hash, role, is_active)
+       VALUES ($1, $2, $3, 'STUDENT', $4)
+       ON CONFLICT (email) DO NOTHING`,
+      [etudiant.fullName, etudiant.email.toLowerCase(), passwordHash, etudiant.isActive]
+    );
+  }
+
+  console.log(
+    `[seed] ${ETUDIANTS.length} etudiants en place, dont ${
+      ETUDIANTS.filter((e) => !e.isActive).length
+    } desactive`
+  );
+}
+
 async function seed(): Promise<void> {
   await seedAdmin();
+  await seedEtudiants();
 }
 
 seed()
