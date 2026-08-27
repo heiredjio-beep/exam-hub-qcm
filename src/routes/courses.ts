@@ -1,11 +1,21 @@
 import { Router } from 'express';
+import { authGuard } from '../Security/authGuard';
+import { roleGuard } from '../Security/roleGuard';
+import { asyncHandler } from '../middlewares/asyncHandler';
+import {
+  creerCoursHandler,
+  listerCoursHandler,
+  modifierCoursHandler,
+  obtenirCoursHandler,
+  supprimerCoursHandler,
+} from '../Controller/courseController';
 
-/**
- * CRUD /api/courses (RG-09 : refus de suppression si examens)
- *
- * Proprietaire : P3 - cours
- * Ce fichier est deja monte dans src/app.ts. Remplissez-le sur votre
- * branche, sans jamais modifier app.ts : c'est ce qui evite que cinq
- * personnes se marchent dessus sur le meme fichier (regle R8).
- */
 export const coursesRouter = Router();
+
+coursesRouter.use(authGuard, roleGuard('ADMIN'));
+
+coursesRouter.get('/', asyncHandler(listerCoursHandler));
+coursesRouter.get('/:id', asyncHandler(obtenirCoursHandler));
+coursesRouter.post('/', asyncHandler(creerCoursHandler));
+coursesRouter.put('/:id', asyncHandler(modifierCoursHandler));
+coursesRouter.delete('/:id', asyncHandler(supprimerCoursHandler));
