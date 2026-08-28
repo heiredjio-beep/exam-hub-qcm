@@ -5,6 +5,7 @@ import type { QuestionInput, QuestionWithChoices } from '../Model/question';
 import {
   deleteChoicesByQuestion,
   deleteQuestion as supprimerQuestionEnBase,
+  examExists,
   examHasAttempts,
   findQuestionById,
   findQuestionsByExam,
@@ -68,6 +69,10 @@ async function assertExamenNonVerrouille(examId: number): Promise<void> {
 }
 
 export async function listerQuestions(examId: number): Promise<QuestionWithChoices[]> {
+  const existe = await examExists(examId);
+  if (!existe) {
+    throw HttpError.notFound('Examen introuvable.');
+  }
   return findQuestionsByExam(examId);
 }
 
