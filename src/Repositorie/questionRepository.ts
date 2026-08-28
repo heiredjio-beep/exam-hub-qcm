@@ -76,6 +76,15 @@ export async function findQuestionById(id: number): Promise<Question | null> {
   return resultat.rowCount ? ligneVersQuestion(resultat.rows[0]) : null;
 }
 
+/** Verifie que l'examen existe avant d'agir dessus (fix 404 vs 200 []). */
+export async function examExists(examId: number): Promise<boolean> {
+  const resultat = await pool.query(
+    `SELECT EXISTS(SELECT 1 FROM exams WHERE id = $1) AS existe`,
+    [examId]
+  );
+  return resultat.rows[0].existe as boolean;
+}
+
 /** RG-08 : un examen est verrouille des qu'il porte au moins une tentative. */
 export async function examHasAttempts(examId: number): Promise<boolean> {
   const resultat = await pool.query(

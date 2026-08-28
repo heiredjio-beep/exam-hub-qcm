@@ -4,6 +4,7 @@ import {
   creerQuestionHandler,
   listerQuestionsHandler,
 } from '../Controller/questionController';
+import { obtenirResultatsHandler } from '../Controller/resultController';
 
 /**
  * GET|POST /api/exams/:id/questions et GET /api/exams/:id/results
@@ -18,6 +19,4 @@ export const examQuestionsRouter = Router();
 // TODO(P2) : brancher le guard ADMIN une fois feat/auth-guards mergee.
 examQuestionsRouter.get('/:id/questions', asyncHandler(listerQuestionsHandler));
 examQuestionsRouter.post('/:id/questions', asyncHandler(creerQuestionHandler));
-
-// GET /:id/results arrive sur la branche feat/exam-results (etape suivante) :
-// moyenne et count calcules en SQL, pas en JS.
+examQuestionsRouter.get('/:id/results', asyncHandler(obtenirResultatsHandler));
