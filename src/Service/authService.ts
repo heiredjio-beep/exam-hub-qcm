@@ -6,7 +6,13 @@ import type { SafeUser } from '../Model/user';
 
 
 export async function login(email: string, plainPassword: string): Promise<{ token: string; user: SafeUser }> {
-  const user = await userRepository.findByEmail(email);
+  // Les emails sont stockes en minuscules (CHECK (email = lower(email)) dans
+  // le schema). Sans cette normalisation, "Admin@Examhub.Local" ne retrouve
+  // aucun compte et l'utilisateur recoit un 401 alors que ses identifiants
+  // sont bons. Le trim absorbe les espaces d'un copier-coller.
+  const emailNormalise = email.trim().toLowerCase();
+
+  const user = await userRepository.findByEmail(emailNormalise);
   if (!user) {
     throw new HttpError(401, 'Identifiants invalides');
   }
