@@ -102,8 +102,13 @@ Créés par `npm run db:seed`.
 | Étudiant | `miora@examhub.local` | `Etudiant123!` | actif |
 | Étudiant | `tiana@examhub.local` | `Etudiant123!` | **désactivé** (démontre RG-11) |
 
-Données de démonstration : 2 cours, 2 examens (un **ouvert**, un **fermé** — démontre
-RG-03), 5 questions et leurs choix.
+Données de démonstration : 2 cours, **3 examens**, **15 questions** et 49 choix.
+
+| Examen | État | Ce qu'il démontre |
+|---|---|---|
+| 1 — Partiel POO | ouvert | parcours étudiant complet |
+| 2 — Contrôle continu 1 | **fermé** | RG-03 : invisible et refusé en soumission |
+| 3 — Examen verrouillé | ouvert, **1 tentative** | RG-08 : questions non modifiables |
 
 ---
 
@@ -177,6 +182,32 @@ sont déjà montés dans `app.ts` : personne n'a besoin de modifier ce fichier p
 | `questions.ts` | `/api/questions` | P4 |
 | `my.ts` | `/api/my` | P5 |
 
+### Contrat des routes
+
+Toutes les routes exigent `Authorization: Bearer <token>`, sauf `POST /api/auth/login`
+et `GET /api/health`.
+
+| Méthode et route | Rôle | Notes |
+|---|---|---|
+| `POST /api/auth/login` | — | 401 générique, **403 distinct** si compte désactivé (RG-11) |
+| `GET /api/students` | ADMIN | jamais de `password_hash` |
+| `POST /api/students` | ADMIN | 409 si email déjà pris |
+| `PUT /api/students/:id` | ADMIN | le rôle n'est jamais modifiable |
+| `POST /api/students/:id/reset-password` | ADMIN | |
+| `DELETE /api/students/:id` | ADMIN | **désactive**, ne supprime pas (RG-10) |
+| `GET POST /api/courses` · `PUT DELETE /api/courses/:id` | ADMIN | 409 si le cours porte des examens (RG-09) |
+| `GET POST /api/exams` · `GET PUT DELETE /api/exams/:id` | ADMIN | 400 si `endsAt <= startsAt` · 409 si tentatives (RG-09) |
+| `GET POST /api/exams/:id/questions` | ADMIN | expose `isCorrect` — **route admin uniquement** |
+| `PUT DELETE /api/questions/:id` | ADMIN | 409 si l'examen a une tentative (RG-08) |
+| `GET /api/exams/:id/results` | ADMIN | moyenne et compte calculés en SQL |
+| `GET /api/my/exams` | STUDENT | fenêtre ouverte et non déjà passés (RG-02, RG-03) |
+| `GET /api/my/exams/:id` | STUDENT | **jamais `isCorrect`** (RG-07) |
+| `POST /api/my/exams/:id/submit` | STUDENT | transaction, note serveur, correction complète (RG-05, 06, 12) |
+| `GET /api/my/results` | STUDENT | historique trié en SQL |
+
+**Aucune route d'inscription n'existe** (RG-01) : le premier administrateur vient du seed,
+les étudiants sont créés par un administrateur. Ce n'est pas un oubli.
+
 ---
 
 ## Base de données
@@ -200,11 +231,63 @@ RG-04 n'est couverte qu'à moitié par SQL : « au moins une bonne réponse » e
 « entre 2 et 6 choix » ne sont pas exprimables par une contrainte et restent
 validées dans `Service/`.
 
+### Le moteur de notation
+
+`POST /api/my/exams/:id/submit` est le point le plus sensible du projet. Tout s'y passe
+dans **une seule transaction** :
+
+1. deuxième contrôle de la fenêtre (RG-03) — l'examen a pu fermer pendant la composition
+2. deuxième contrôle de l'absence de tentative (RG-02)
+3. rechargement des bonnes réponses **depuis la base** (RG-06)
+4. calcul de la note — une question sans réponse vaut 0 (RG-05)
+5. insertion de la tentative puis des réponses
+
+Le client n'envoie que des identifiants. Un champ `score` dans le corps est ignoré. Un
+`choiceId` appartenant à une autre question compte comme non répondu, un `questionId`
+étranger à l'examen est ignoré.
+
+La contrainte `UNIQUE(exam_id, student_id)` est la garantie finale : si deux requêtes
+passent les contrôles simultanément, PostgreSQL en rejette une et l'erreur `23505` est
+traduite en 409 lisible.
+
+Vérifier qu'une seule tentative existe après un double envoi :
+
+```sql
+SELECT exam_id, student_id, count(*) FROM attempts GROUP BY 1, 2 HAVING count(*) > 1;
+-- doit ne renvoyer aucune ligne
+```
+
 ### Fuseaux horaires
 
 `starts_at` et `ends_at` sont des `TIMESTAMPTZ`, donc stockés en **UTC**. L'API reçoit
 et renvoie de l'ISO 8601 en UTC. La conversion vers l'heure locale se fait uniquement
 à l'affichage. Le conteneur est lui-même en UTC.
+
+---
+
+## Tests
+
+`tests/api.http` couvre **47 cas** sur les cinq verticales, à ouvrir avec l'extension
+REST Client de VS Code. Les tokens circulent automatiquement entre les requêtes via
+`{{loginAdmin.response.body.token}}`.
+
+Relancer `npm run db:reset` avant la section « Espace étudiant » : elle crée une
+tentative, et RG-02 interdit d'en créer une seconde.
+
+---
+
+## Décisions en attente d'arbitrage
+
+Trois points ne sont pas tranchés. Ils sont listés ici pour que personne ne code deux
+logiques contradictoires. **À décider en équipe puis à figer dans ce README.**
+
+1. **`PUT /api/exams/:id` après une première tentative.** RG-08 verrouille les
+   *questions*, pas l'examen lui-même. Modifier la fenêtre d'un examen déjà passé :
+   autorisé ou non ?
+2. **Code HTTP d'un examen hors fenêtre** : l'implémentation actuelle renvoie **403**.
+   À confirmer, ou basculer sur 409 partout.
+3. **Étudiants n'ayant pas passé l'examen** dans `GET /api/exams/:id/results` :
+   affichés avec la mention « non passé », ou absents ?
 
 ---
 
