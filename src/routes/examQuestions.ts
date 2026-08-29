@@ -5,6 +5,8 @@ import {
   listerQuestionsHandler,
 } from '../Controller/questionController';
 import { obtenirResultatsHandler } from '../Controller/resultController';
+import { authGuard } from '../Security/authGuard';
+import { roleGuard } from '../Security/roleGuard';
 
 /**
  * GET|POST /api/exams/:id/questions et GET /api/exams/:id/results
@@ -16,7 +18,10 @@ import { obtenirResultatsHandler } from '../Controller/resultController';
  */
 export const examQuestionsRouter = Router();
 
-// TODO(P2) : brancher le guard ADMIN une fois feat/auth-guards mergee.
+// RG-07 : ces routes exposent is_correct, elles sont donc reservees a
+// l'administrateur. Sans ces gardes, n'importe qui lit les bonnes reponses.
+examQuestionsRouter.use(authGuard, roleGuard('ADMIN'));
+
 examQuestionsRouter.get('/:id/questions', asyncHandler(listerQuestionsHandler));
 examQuestionsRouter.post('/:id/questions', asyncHandler(creerQuestionHandler));
 examQuestionsRouter.get('/:id/results', asyncHandler(obtenirResultatsHandler));
