@@ -2,7 +2,10 @@ import { Router } from 'express';
 import { asyncHandler } from '../middlewares/asyncHandler';
 import { authGuard } from '../Security/authGuard';
 import { roleGuard } from '../Security/roleGuard';
-import { listerExamensDisponiblesHandler } from '../Controller/myExamController';
+import {
+  chargerExamenHandler,
+  listerExamensDisponiblesHandler,
+} from '../Controller/myExamController';
 
 /**
  * /api/my/exams, /api/my/exams/:id, /api/my/exams/:id/submit, /api/my/results
@@ -20,3 +23,4 @@ export const myRouter = Router();
 myRouter.use(authGuard, roleGuard('STUDENT'));
 
 myRouter.get('/exams', asyncHandler(listerExamensDisponiblesHandler));
+myRouter.get('/exams/:id', asyncHandler(chargerExamenHandler));
