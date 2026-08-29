@@ -10,6 +10,18 @@ import type { StudentSummary } from '../Model/user';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Normalise l'email avant toute lecture ou ecriture.
+ *
+ * Le schema impose CHECK (email = lower(email)) : sans cette normalisation,
+ * un email saisi avec une majuscule est rejete par la base et remonte en
+ * 400 "Donnees invalides." au lieu du message metier attendu. Le trim evite
+ * en plus qu'un espace colle par un copier-coller cree un compte fantome.
+ */
+function normaliserEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 function validerNom(fullName: string): void {
   if (fullName.trim().length === 0) {
     throw HttpError.badRequest('Le nom complet ne peut pas etre vide.');
@@ -45,17 +57,19 @@ export async function creerEtudiant(
   email: string,
   plainPassword: string
 ): Promise<StudentSummary> {
+  const emailNormalise = normaliserEmail(email);
+
   validerNom(fullName);
-  validerEmail(email);
+  validerEmail(emailNormalise);
   validerMotDePasse(plainPassword);
 
-  const dejaPris = await userRepository.existsByEmail(email);
+  const dejaPris = await userRepository.existsByEmail(emailNormalise);
   if (dejaPris) {
     throw HttpError.conflict('Cet email est deja utilise.');
   }
 
   const passwordHash = await password.hash(plainPassword);
-  return userRepository.createStudent(fullName, email, passwordHash);
+  return userRepository.createStudent(fullName, emailNormalise, passwordHash);
 }
 
 export async function modifierEtudiant(
@@ -63,16 +77,18 @@ export async function modifierEtudiant(
   fullName: string,
   email: string
 ): Promise<StudentSummary> {
+  const emailNormalise = normaliserEmail(email);
+
   await trouverEtudiantOuEchouer(id);
   validerNom(fullName);
-  validerEmail(email);
+  validerEmail(emailNormalise);
 
-  const dejaPris = await userRepository.existsByEmail(email, id);
+  const dejaPris = await userRepository.existsByEmail(emailNormalise, id);
   if (dejaPris) {
     throw HttpError.conflict('Cet email est deja utilise.');
   }
 
-  const etudiant = await userRepository.updateStudent(id, fullName, email);
+  const etudiant = await userRepository.updateStudent(id, fullName, emailNormalise);
   if (!etudiant) {
     throw HttpError.notFound('Etudiant introuvable.');
   }
