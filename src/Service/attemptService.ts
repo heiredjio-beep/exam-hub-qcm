@@ -5,6 +5,7 @@ import * as answerRepository from '../Repositorie/answerRepository';
 import { calculerNote } from './scoringService';
 import type {
   AnswerInput,
+  AttemptHistoryItem,
   AttemptResult,
   AvailableExam,
   StudentExam,
@@ -154,4 +155,9 @@ export async function soumettreExamen(
     }
     throw erreur;
   }
+}
+
+/** Historique personnel de l'etudiant connecte, du plus recent au plus ancien. */
+export async function listerMesResultats(studentId: number): Promise<AttemptHistoryItem[]> {
+  return attemptRepository.findHistory(studentId);
 }

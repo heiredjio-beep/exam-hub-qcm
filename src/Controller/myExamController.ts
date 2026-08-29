@@ -85,3 +85,9 @@ export async function soumettreExamenHandler(req: Request, res: Response): Promi
   );
   res.status(201).json(resultat);
 }
+
+/** GET /api/my/results */
+export async function listerMesResultatsHandler(req: Request, res: Response): Promise<void> {
+  const historique = await attemptService.listerMesResultats(etudiantConnecte(req));
+  res.json(historique);
+}
