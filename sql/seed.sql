@@ -31,14 +31,19 @@ ON CONFLICT (id) DO NOTHING;
 --  donc quelle que soit la date a laquelle le seed est rejoue.
 -- ---------------------------------------------------------------------
 INSERT INTO exams (id, course_id, title, description, starts_at, ends_at) VALUES
-  (1, 1, 'Partiel POO',
-      'Examen ouvert, utilise pour la demonstration du parcours etudiant.',
+  -- Ouvert : sert a derouler le parcours etudiant complet.
+  (1, 1, 'Partiel de programmation orientee objet',
+      'Evaluation des notions d''encapsulation, d''heritage et de structures de donnees.',
       now() - interval '1 day',  now() + interval '7 days'),
-  (2, 2, 'Controle continu 1',
-      'Examen deja ferme, utilise pour demontrer RG-03.',
+  -- Ferme : demontre RG-03, invisible cote etudiant et refuse en soumission.
+  (2, 2, 'Controle continu d''algebre lineaire',
+      'Applications lineaires, matrices et determinants.',
       now() - interval '10 days', now() - interval '3 days'),
-  (3, 1, 'Examen verrouille (demo RG-08)',
-      'Examen deja passe par un etudiant : toute ecriture sur ses questions doit renvoyer 409.',
+  -- Ouvert mais deja passe par un etudiant : demontre RG-08, ses questions
+  -- ne sont plus modifiables. Les libelles restent volontairement neutres,
+  -- l'interface etudiante ne doit exposer aucun jargon interne.
+  (3, 1, 'Controle de bases de donnees et outils',
+      'SQL, transactions, contraintes d''integrite et gestion de versions.',
       now() - interval '2 days', now() + interval '5 days')
 ON CONFLICT (id) DO NOTHING;
 
