@@ -1,0 +1,282 @@
+### Login admin (nominal)
+# @name loginAdmin
+POST http://localhost:4000/api/auth/login
+Content-Type: application/json
+
+{ "email": "admin@examhub.local", "password": "Admin123!" }
+
+### Login mauvais mot de passe (401)
+POST http://localhost:4000/api/auth/login
+Content-Type: application/json
+
+{ "email": "admin@examhub.local", "password": "faux" }
+
+### Login compte desactive (403, RG-11)
+POST http://localhost:4000/api/auth/login
+Content-Type: application/json
+
+{ "email": "tiana@examhub.local", "password": "Etudiant123!" }
+
+### Liste des etudiants (nominal)
+GET http://localhost:4000/api/students
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Liste des etudiants sans token (401)
+GET http://localhost:4000/api/students
+
+### Creation etudiant (nominal, 201)
+POST http://localhost:4000/api/students
+Authorization: Bearer {{loginAdmin.response.body.token}}
+Content-Type: application/json
+
+{ "fullName": "Nouvel Etudiant", "email": "nouvel.etudiant@examhub.local", "password": "Etudiant123!" }
+
+### Creation etudiant email deja pris (409)
+POST http://localhost:4000/api/students
+Authorization: Bearer {{loginAdmin.response.body.token}}
+Content-Type: application/json
+
+{ "fullName": "Doublon", "email": "andry@examhub.local", "password": "Etudiant123!" }
+
+### Modification etudiant (nominal)
+PUT http://localhost:4000/api/students/2
+Authorization: Bearer {{loginAdmin.response.body.token}}
+Content-Type: application/json
+
+{ "fullName": "Andry Modifie", "email": "andry@examhub.local" }
+
+### Modification etudiant introuvable (404)
+PUT http://localhost:4000/api/students/9999
+Authorization: Bearer {{loginAdmin.response.body.token}}
+Content-Type: application/json
+
+{ "fullName": "Personne", "email": "personne@examhub.local" }
+
+### Reinitialisation mot de passe (nominal, 204)
+POST http://localhost:4000/api/students/2/reset-password
+Authorization: Bearer {{loginAdmin.response.body.token}}
+Content-Type: application/json
+
+{ "password": "NouveauPass123!" }
+
+### Reinitialisation mot de passe trop court (400)
+POST http://localhost:4000/api/students/2/reset-password
+Authorization: Bearer {{loginAdmin.response.body.token}}
+Content-Type: application/json
+
+{ "password": "court" }
+
+### Desactivation etudiant (nominal, RG-10 : is_active passe a false)
+DELETE http://localhost:4000/api/students/2
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Desactivation etudiant introuvable (404)
+DELETE http://localhost:4000/api/students/9999
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Route admin appelee avec un token etudiant (403)
+# @name loginEtudiant
+POST http://localhost:4000/api/auth/login
+Content-Type: application/json
+
+{ "email": "miora@examhub.local", "password": "Etudiant123!" }
+
+###
+GET http://localhost:4000/api/students
+Authorization: Bearer {{loginEtudiant.response.body.token}}
+
+# =====================================================================
+#  Cours et examens — perimetre P3
+# =====================================================================
+
+### Liste des cours (nominal)
+GET http://localhost:4000/api/courses
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Creation cours (nominal, 201) — le code est normalise en majuscules
+POST http://localhost:4000/api/courses
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+{ "code": "algo1", "name": "Algorithmique", "description": "Structures et complexite." }
+
+### Creation cours code deja pris (409)
+POST http://localhost:4000/api/courses
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+{ "code": "PROG2", "name": "Doublon" }
+
+### Suppression cours qui porte des examens (409, RG-09)
+DELETE http://localhost:4000/api/courses/1
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Creation examen fenetre inversee (400)
+POST http://localhost:4000/api/exams
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+{ "courseId": 1, "title": "Fenetre inversee", "startsAt": "2026-09-10T10:00:00.000Z", "endsAt": "2026-09-10T08:00:00.000Z" }
+
+### Creation examen sur un cours inexistant (404)
+POST http://localhost:4000/api/exams
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+{ "courseId": 9999, "title": "Orphelin", "startsAt": "2026-09-10T08:00:00.000Z", "endsAt": "2026-09-10T10:00:00.000Z" }
+
+### Suppression examen qui a des tentatives (409, RG-09)
+DELETE http://localhost:4000/api/exams/3
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+# =====================================================================
+#  Questions et resultats — perimetre P4
+# =====================================================================
+
+### Questions d'un examen, vue admin (is_correct visible, route protegee)
+GET http://localhost:4000/api/exams/1/questions
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Questions sans token (401) — RG-07 : la faille serait ici
+GET http://localhost:4000/api/exams/1/questions
+
+### Creation question a un seul choix (400, RG-04)
+POST http://localhost:4000/api/exams/1/questions
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+{ "statement": "Un seul choix ?", "points": 2, "choices": [{ "label": "a", "isCorrect": true }] }
+
+### Creation question a sept choix (400, RG-04)
+POST http://localhost:4000/api/exams/1/questions
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+{ "statement": "Sept choix ?", "points": 2, "choices": [{ "label": "a", "isCorrect": true }, { "label": "b" }, { "label": "c" }, { "label": "d" }, { "label": "e" }, { "label": "f" }, { "label": "g" }] }
+
+### Creation question sans bonne reponse (400, RG-04)
+POST http://localhost:4000/api/exams/1/questions
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+{ "statement": "Aucune bonne reponse ?", "points": 2, "choices": [{ "label": "a" }, { "label": "b" }] }
+
+### Creation question avec deux bonnes reponses (400, RG-04)
+POST http://localhost:4000/api/exams/1/questions
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+{ "statement": "Deux bonnes reponses ?", "points": 2, "choices": [{ "label": "a", "isCorrect": true }, { "label": "b", "isCorrect": true }] }
+
+### Creation question avec un bareme a zero (400, RG-04)
+POST http://localhost:4000/api/exams/1/questions
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+{ "statement": "Bareme nul ?", "points": 0, "choices": [{ "label": "a", "isCorrect": true }, { "label": "b" }] }
+
+### Creation question sur un examen deja passe (409, RG-08)
+POST http://localhost:4000/api/exams/3/questions
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+{ "statement": "Trop tard", "points": 2, "choices": [{ "label": "a", "isCorrect": true }, { "label": "b" }] }
+
+### Suppression question d'un examen deja passe (409, RG-08)
+DELETE http://localhost:4000/api/questions/11
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Questions d'un examen inexistant (404)
+GET http://localhost:4000/api/exams/9999/questions
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Resultats d'un examen (moyenne calculee en SQL)
+GET http://localhost:4000/api/exams/3/results
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+# =====================================================================
+#  Espace etudiant et notation — perimetre P5
+#
+#  Rejouer npm run db:reset avant cette section : elle cree une tentative,
+#  et RG-02 interdit d'en creer une seconde.
+# =====================================================================
+
+### Login etudiant actif
+# @name loginEtudiant
+POST http://localhost:4000/api/auth/login
+Content-Type: application/json
+
+{ "email": "miora@examhub.local", "password": "Etudiant123!" }
+
+### Examens disponibles (RG-03 fenetre ouverte, RG-02 pas deja passes)
+GET http://localhost:4000/api/my/exams
+Authorization: Bearer {{loginEtudiant.response.body.token}}
+
+### Espace etudiant appele par un administrateur (403)
+GET http://localhost:4000/api/my/exams
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Chargement d'un examen ouvert (200)
+# RG-07 : verifier a l'oeil que la reponse ne contient AUCUN champ isCorrect.
+GET http://localhost:4000/api/my/exams/1
+Authorization: Bearer {{loginEtudiant.response.body.token}}
+
+### Chargement d'un examen ferme (403, RG-03)
+GET http://localhost:4000/api/my/exams/2
+Authorization: Bearer {{loginEtudiant.response.body.token}}
+
+### Chargement d'un examen inexistant (404)
+GET http://localhost:4000/api/my/exams/9999
+Authorization: Bearer {{loginEtudiant.response.body.token}}
+
+### Soumission partielle (201, RG-05)
+# Deux questions repondues sur cinq : les trois autres valent 0 point.
+# La note attendue est calculee par le serveur, jamais envoyee par le client.
+POST http://localhost:4000/api/my/exams/1/submit
+Content-Type: application/json
+Authorization: Bearer {{loginEtudiant.response.body.token}}
+
+{ "answers": [ { "questionId": 1, "choiceId": 1 }, { "questionId": 2, "choiceId": 5 }, { "questionId": 3, "choiceId": null } ] }
+
+### Deuxieme soumission du meme examen (409, RG-02)
+# A rejouer immediatement apres la precedente : la base ne doit contenir
+# qu'une seule tentative, verifiable avec la requete SQL du README.
+POST http://localhost:4000/api/my/exams/1/submit
+Content-Type: application/json
+Authorization: Bearer {{loginEtudiant.response.body.token}}
+
+{ "answers": [ { "questionId": 1, "choiceId": 1 } ] }
+
+### Soumission avec un score injecte et des identifiants etrangers
+# RG-06 : le champ "score" est ignore, le serveur recalcule tout.
+# Le choiceId 8 appartient a une autre question, le questionId 4 a un autre
+# examen : les deux sont neutralises, la question compte comme non repondue.
+POST http://localhost:4000/api/my/exams/1/submit
+Content-Type: application/json
+Authorization: Bearer {{loginEtudiant.response.body.token}}
+
+{ "score": 999, "answers": [ { "questionId": 1, "choiceId": 8 }, { "questionId": 4, "choiceId": 11 } ] }
+
+### Soumission sur un examen ferme (403, RG-03)
+POST http://localhost:4000/api/my/exams/2/submit
+Content-Type: application/json
+Authorization: Bearer {{loginEtudiant.response.body.token}}
+
+{ "answers": [ { "questionId": 6, "choiceId": 17 } ] }
+
+### Historique personnel (tri du plus recent au plus ancien, en SQL)
+GET http://localhost:4000/api/my/results
+Authorization: Bearer {{loginEtudiant.response.body.token}}
+
+### Historique sans token (401)
+GET http://localhost:4000/api/my/results
+
+# =====================================================================
+#  Sonde de vie
+# =====================================================================
+
+### Etat de l'API et de la base
+GET http://localhost:4000/api/health
+
+### Route inconnue (404 au format RG-13)
+GET http://localhost:4000/api/inexistant

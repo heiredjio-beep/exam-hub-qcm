@@ -1,11 +1,21 @@
 import { Router } from 'express';
+import { authGuard } from '../Security/authGuard';
+import { roleGuard } from '../Security/roleGuard';
+import { asyncHandler } from '../middlewares/asyncHandler';
+import {
+  creerExamenHandler,
+  listerExamensHandler,
+  modifierExamenHandler,
+  obtenirExamenHandler,
+  supprimerExamenHandler,
+} from '../Controller/examController';
 
-/**
- * CRUD /api/exams (fenetre de disponibilite, RG-03 et RG-09)
- *
- * Proprietaire : P3 - examens
- * Ce fichier est deja monte dans src/app.ts. Remplissez-le sur votre
- * branche, sans jamais modifier app.ts : c'est ce qui evite que cinq
- * personnes se marchent dessus sur le meme fichier (regle R8).
- */
 export const examsRouter = Router();
+
+examsRouter.use(authGuard, roleGuard('ADMIN'));
+
+examsRouter.get('/', asyncHandler(listerExamensHandler));
+examsRouter.get('/:id', asyncHandler(obtenirExamenHandler));
+examsRouter.post('/', asyncHandler(creerExamenHandler));
+examsRouter.put('/:id', asyncHandler(modifierExamenHandler));
+examsRouter.delete('/:id', asyncHandler(supprimerExamenHandler));
