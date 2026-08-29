@@ -1,4 +1,8 @@
 import { Router } from 'express';
+import { asyncHandler } from '../middlewares/asyncHandler';
+import { authGuard } from '../Security/authGuard';
+import { roleGuard } from '../Security/roleGuard';
+import { listerExamensDisponiblesHandler } from '../Controller/myExamController';
 
 /**
  * /api/my/exams, /api/my/exams/:id, /api/my/exams/:id/submit, /api/my/results
@@ -9,3 +13,10 @@ import { Router } from 'express';
  * personnes se marchent dessus sur le meme fichier (regle R8).
  */
 export const myRouter = Router();
+
+// Tout l'espace etudiant est reserve au role STUDENT. Un administrateur qui
+// appelle ces routes recoit 403 : il n'a rien a y faire, et cela evite
+// qu'un compte admin cree une tentative par erreur.
+myRouter.use(authGuard, roleGuard('STUDENT'));
+
+myRouter.get('/exams', asyncHandler(listerExamensDisponiblesHandler));
