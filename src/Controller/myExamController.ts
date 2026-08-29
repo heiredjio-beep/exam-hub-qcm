@@ -19,8 +19,23 @@ function etudiantConnecte(req: Request): number {
   return req.user.id;
 }
 
+function idDepuisParametre(valeur: string | string[] | undefined): number {
+  const id = Number(Array.isArray(valeur) ? valeur[0] : valeur);
+  if (!Number.isInteger(id) || id <= 0) {
+    throw HttpError.badRequest('Identifiant invalide.');
+  }
+  return id;
+}
+
 /** GET /api/my/exams */
 export async function listerExamensDisponiblesHandler(req: Request, res: Response): Promise<void> {
   const examens = await attemptService.listerExamensDisponibles(etudiantConnecte(req));
   res.json(examens);
+}
+
+/** GET /api/my/exams/:id */
+export async function chargerExamenHandler(req: Request, res: Response): Promise<void> {
+  const examId = idDepuisParametre(req.params.id);
+  const examen = await attemptService.chargerExamenPourPassage(examId, etudiantConnecte(req));
+  res.json(examen);
 }

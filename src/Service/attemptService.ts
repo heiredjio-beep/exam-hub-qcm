@@ -1,6 +1,6 @@
 import { HttpError } from '../Security/httpError';
 import * as attemptRepository from '../Repositorie/attemptRepository';
-import type { AvailableExam } from '../Model/attempt';
+import type { AvailableExam, StudentExam } from '../Model/attempt';
 
 /**
  * Couche Service/ — perimetre P5.
@@ -24,4 +24,34 @@ export async function assertAucuneTentative(examId: number, studentId: number): 
   if (tentative) {
     throw HttpError.conflict('Vous avez deja passe cet examen.');
   }
+}
+
+/**
+ * RG-03, premier point de controle : l'examen doit exister et sa fenetre
+ * doit etre ouverte maintenant. Le second point de controle est refait
+ * dans la transaction de soumission — l'examen peut fermer pendant que
+ * l'etudiant compose.
+ */
+export async function chargerExamenPourPassage(
+  examId: number,
+  studentId: number
+): Promise<StudentExam> {
+  const fenetre = await attemptRepository.findExamWindow(examId);
+  if (!fenetre) {
+    throw HttpError.notFound('Examen introuvable.');
+  }
+  if (!fenetre.ouvert) {
+    throw HttpError.forbidden("Cet examen n'est pas ouvert.");
+  }
+
+  await assertAucuneTentative(examId, studentId);
+
+  const examen = await attemptRepository.findStudentExam(examId);
+  if (!examen) {
+    throw HttpError.notFound('Examen introuvable.');
+  }
+  if (examen.questions.length === 0) {
+    throw HttpError.conflict("Cet examen ne contient aucune question pour le moment.");
+  }
+  return examen;
 }
