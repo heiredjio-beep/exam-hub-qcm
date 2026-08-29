@@ -14,3 +14,10 @@ export interface SafeUser {
   email: string;
   role: 'ADMIN' | 'STUDENT';
 }
+
+export interface StudentSummary {
+  id: number;
+  fullName: string;
+  email: string;
+  isActive: boolean;
+}
