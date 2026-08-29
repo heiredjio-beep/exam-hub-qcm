@@ -8,6 +8,46 @@ Dépôt frontend associé : [Examen-hub-qcm-frontEnd](https://github.com/heiredj
 
 ---
 
+## Démarrage rapide
+
+Quatre commandes, moins de cinq minutes, aucune installation de PostgreSQL.
+
+```bash
+cp .env.example .env      # PowerShell : copy .env.example .env
+npm install
+docker compose up -d && npm run db:reset
+npm run dev
+```
+
+Puis, dans un autre terminal, le frontend (voir son README) :
+
+```bash
+npm install && npm run dev   # http://localhost:5173
+```
+
+**Le test qui décide de tout :**
+
+```bash
+curl http://localhost:4000/api/health
+# {"status":"ok","database":"ok"}
+```
+
+Si cette route ne répond pas, rien d'autre ne fonctionnera. Voir
+« [Conflit de port](#conflit-de-port-sur-votre-poste) » — c'est la cause dans 90 % des cas.
+
+### Pour la correction
+
+| Ce que vous cherchez | Où |
+|---|---|
+| Vérifier les 13 règles de gestion, une par une | [Grille de vérification](#grille-de-vérification-des-13-règles-de-gestion) |
+| Comptes de connexion | [Comptes de test](#comptes-de-test) |
+| Contrat des 20 routes | [Routes](#routes) |
+| Fichier de tests prêt à l'emploi (47 cas) | `tests/api.http` |
+| Scénario de démonstration pas à pas | README du frontend |
+| Contraintes SQL annotées `RG-xx` | `sql/schema.sql` |
+
+---
+
 ## Prérequis
 
 | Outil | Version testée |
@@ -109,6 +149,90 @@ Données de démonstration : 2 cours, **3 examens**, **15 questions** et 49 choi
 | 1 — Partiel POO | ouvert | parcours étudiant complet |
 | 2 — Contrôle continu 1 | **fermé** | RG-03 : invisible et refusé en soumission |
 | 3 — Examen verrouillé | ouvert, **1 tentative** | RG-08 : questions non modifiables |
+
+---
+
+## Grille de vérification des 13 règles de gestion
+
+Cette section est destinée au correcteur. Chaque règle se vérifie par une commande
+exacte, sur une base fraîche (`npm run db:reset`).
+
+### Préparer les jetons
+
+```bash
+ADMIN=$(curl -s -X POST http://localhost:4000/api/auth/login   -H "Content-Type: application/json"   -d '{"email":"admin@examhub.local","password":"Admin123!"}' | grep -o '"token":"[^"]*' | cut -d'"' -f4)
+
+ETUDIANT=$(curl -s -X POST http://localhost:4000/api/auth/login   -H "Content-Type: application/json"   -d '{"email":"miora@examhub.local","password":"Etudiant123!"}' | grep -o '"token":"[^"]*' | cut -d'"' -f4)
+```
+
+Sous Windows PowerShell, ouvrez plutôt `tests/api.http` avec l'extension **REST Client**
+de VS Code : les 47 cas y sont prêts et les jetons circulent automatiquement.
+
+### Les 13 règles
+
+| Règle | Commande | Résultat attendu |
+|---|---|---|
+| **RG-01** | `curl -i -X POST localhost:4000/api/auth/register` | `404` — aucune route d'inscription n'existe. Le premier admin vient du seed. |
+| **RG-02** | Soumettre deux fois `POST /api/my/exams/1/submit` | `201` puis **`409`**. Une seule ligne dans `attempts`. |
+| **RG-03** | `curl -i localhost:4000/api/my/exams/2 -H "Authorization: Bearer $ETUDIANT"` | `403` — l'examen 2 est fermé. Il est aussi **absent** de `GET /api/my/exams`. |
+| **RG-04** | `POST /api/exams/1/questions` avec 1, 7, 0 ou 2 bonnes réponses, ou `points: 0` | `400` avec un message précis à chaque fois. |
+| **RG-05** | Soumettre en omettant des questions | `201`, les questions non répondues valent `0`, la soumission partielle est acceptée. |
+| **RG-06** | Soumettre avec `{"score": 999, "answers": [...]}` | Le champ `score` est **ignoré**, la note est recalculée côté serveur. |
+| **RG-07** | `curl localhost:4000/api/my/exams/1 -H "Authorization: Bearer $ETUDIANT" \| grep -i correct` | **Aucun résultat.** `is_correct` n'est jamais dans le `SELECT`. |
+| **RG-08** | `DELETE /api/questions/11` (examen 3, déjà passé) | `409` sur les **trois** opérations : POST, PUT et DELETE. |
+| **RG-09** | `DELETE /api/courses/1` puis `DELETE /api/exams/3` | `409` avec le décompte exact : « Ce cours contient 2 examens… ». |
+| **RG-10** | `DELETE /api/students/2` puis `SELECT * FROM users WHERE id = 2` | `is_active` passe à `false`, **la ligne existe toujours**. |
+| **RG-11** | Se connecter avec `tiana@examhub.local` | `403` « Ce compte a ete desactive » — **distinct** du `401` générique. |
+| **RG-12** | Réponse de `POST /api/my/exams/1/submit` | Note, pourcentage et **correction complète** de chaque question. |
+| **RG-13** | `curl -i localhost:4000/api/inexistant` | `404` `{"message":"Ressource introuvable."}` — format unique partout. |
+
+### Protection des routes
+
+| Test | Attendu |
+|---|---|
+| Route admin sans jeton | `401` |
+| Route admin avec un jeton étudiant | `403` |
+| Espace étudiant avec un jeton admin | `403` |
+| Jeton falsifié | `401` |
+
+Seules `POST /api/auth/login` et `GET /api/health` sont publiques.
+
+### Vérifications en base
+
+```sql
+-- RG-02 : aucun étudiant ne doit avoir deux tentatives sur le même examen
+SELECT exam_id, student_id, count(*) FROM attempts GROUP BY 1,2 HAVING count(*) > 1;
+
+-- RG-04 : aucune question ne doit avoir deux bonnes réponses
+SELECT question_id, count(*) FROM choices WHERE is_correct GROUP BY 1 HAVING count(*) > 1;
+
+-- RG-10 : aucun étudiant supprimé physiquement
+SELECT id, email, is_active FROM users WHERE role = 'STUDENT';
+```
+
+Les trois requêtes doivent renvoyer **zéro ligne** pour les deux premières.
+
+### Où lire le code
+
+| Sujet | Fichier |
+|---|---|
+| Contraintes SQL annotées `RG-xx` | `sql/schema.sql` |
+| Validation RG-04 | `src/Service/questionService.ts` |
+| Verrouillage RG-08 | `src/Service/questionService.ts` |
+| Guards et rôles | `src/Security/authGuard.ts`, `roleGuard.ts` |
+| Moteur de notation RG-05/06 | `src/Service/scoringService.ts` |
+| Transaction de soumission RG-02/03 | `src/Service/attemptService.ts` |
+| Format d'erreur RG-13 | `src/middlewares/errorHandler.ts` |
+
+### Reconstruction complète depuis zéro
+
+```bash
+docker compose down -v && docker compose up -d && npm run db:reset && npm run dev
+```
+
+Aucune intervention manuelle n'est nécessaire : le schéma est rejouable et le seed
+idempotent.
+
 
 ---
 
