@@ -4,6 +4,8 @@ import {
   modifierQuestionHandler,
   supprimerQuestionHandler,
 } from '../Controller/questionController';
+import { authGuard } from '../Security/authGuard';
+import { roleGuard } from '../Security/roleGuard';
 
 /**
  * PUT|DELETE /api/questions/:id (RG-04 et RG-08)
@@ -15,8 +17,8 @@ import {
  */
 export const questionsRouter = Router();
 
-// TODO(P2) : brancher le guard d'authentification + role ADMIN des que
-// Security/ expose ses middlewares (feat/auth-guards). En attendant,
-// ces routes restent ouvertes pour permettre les tests au curl.
+// Modification et suppression de questions : administrateur uniquement.
+questionsRouter.use(authGuard, roleGuard('ADMIN'));
+
 questionsRouter.put('/:id', asyncHandler(modifierQuestionHandler));
 questionsRouter.delete('/:id', asyncHandler(supprimerQuestionHandler));
