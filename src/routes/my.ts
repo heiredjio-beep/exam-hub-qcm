@@ -5,6 +5,7 @@ import { roleGuard } from '../Security/roleGuard';
 import {
   chargerExamenHandler,
   listerExamensDisponiblesHandler,
+  soumettreExamenHandler,
 } from '../Controller/myExamController';
 
 /**
@@ -24,3 +25,4 @@ myRouter.use(authGuard, roleGuard('STUDENT'));
 
 myRouter.get('/exams', asyncHandler(listerExamensDisponiblesHandler));
 myRouter.get('/exams/:id', asyncHandler(chargerExamenHandler));
+myRouter.post('/exams/:id/submit', asyncHandler(soumettreExamenHandler));
